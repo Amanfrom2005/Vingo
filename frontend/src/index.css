@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --pumpkin-50: 11 100% 96%;
+  --pumpkin-100: 12 100% 89%;
+  --pumpkin-200: 15 100% 76%;
+  --pumpkin-300: 23 100% 57%;
+  --pumpkin-400: 27 100% 46%;
+  --pumpkin-500: 26 100% 40%;
+  --pumpkin-600: 26 100% 33%;
+  --pumpkin-700: 25 100% 25%;
+  --pumpkin-800: 24 100% 18%;
+  --pumpkin-900: 20 100% 11%;
+  --pumpkin-950: 15 100% 7%;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-3000 {
+  animation-delay: 3s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
