@@ -104,7 +104,7 @@ function AddItem() {
       });
       dispatch(setMyShopData(result.data));
       setLoading(false);
-      navigate("/owner-dashboard");
+      navigate("/");
     } catch (error) {
       console.error("Error adding item:", error);
       setLoading(false);

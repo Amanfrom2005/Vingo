@@ -4,22 +4,49 @@ import { FaMinus, FaPlus, FaLeaf, FaDrumstickBite } from "react-icons/fa";
 import { MdDeleteOutline } from "react-icons/md";
 import { useDispatch } from 'react-redux';
 import { removeCartItem, updateQuantity } from '../redux/userSlice';
+import axios from 'axios';
+import { serverUrl } from '../App';
 
 function CartItemCard({ data }) {
   const dispatch = useDispatch();
 
-  const handleIncrease = (id, currentQty) => {
-    dispatch(updateQuantity({ id, quantity: currentQty + 1 }));
-  };
-
-  const handleDecrease = (id, currentQty) => {
-    if (currentQty > 1) {
-      dispatch(updateQuantity({ id, quantity: currentQty - 1 }));
+  const handleIncrease = async (id, currentQty) => {
+    try {
+      await axios.put(
+        `${serverUrl}/api/user/cart`,
+        { id, quantity: currentQty + 1 },
+        { withCredentials: true }
+      );
+      dispatch(updateQuantity({ id, quantity: currentQty + 1 }));
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
     }
   };
 
-  const handleRemove = (id) => {
-    dispatch(removeCartItem(id));
+  const handleDecrease = async (id, currentQty) => {
+    if (currentQty > 1) {
+      try {
+        await axios.put(
+          `${serverUrl}/api/user/cart`,
+          { id, quantity: currentQty - 1 },
+          { withCredentials: true }
+        );
+        dispatch(updateQuantity({ id, quantity: currentQty - 1 }));
+      } catch (error) {
+        console.error('Failed to update quantity:', error);
+      }
+    }
+  };
+
+  const handleRemove = async (id) => {
+    try {
+      await axios.delete(`${serverUrl}/api/user/cart/${id}`, {
+        withCredentials: true,
+      });
+      dispatch(removeCartItem(id));
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+    }
   };
 
   const cardVariants = {

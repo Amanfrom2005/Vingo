@@ -34,9 +34,15 @@ const userSlice = createSlice({
     setItemsInMyCity: (state, action) => {
       state.itemsInMyCity = action.payload
     },
+    // setSocket is no longer used to avoid storing non-serializable socket in Redux state
     setSocket: (state, action) => {
-      state.socket = action.payload
+      // no-op
     },
+    setCartItems: (state, action) => {
+      state.cartItems = action.payload
+      state.totalAmount = state.cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
+    },
+
     addToCart: (state, action) => {
       const cartItem = action.payload
       const existingItem = state.cartItems.find(i => i.id == cartItem.id)
@@ -115,6 +121,7 @@ export const {
   setCurrentState, 
   setShopsInMyCity, 
   setItemsInMyCity, 
+  setCartItems,
   addToCart, 
   updateQuantity, 
   removeCartItem, 

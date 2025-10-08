@@ -10,6 +10,8 @@ import {
 import { FaRegStar } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart, removeCartItem } from '../redux/userSlice';
+import axios from 'axios';
+import { serverUrl } from '../App';
 
 function FoodCard({ data }) {
   const dispatch = useDispatch();
@@ -44,8 +46,8 @@ function FoodCard({ data }) {
 
     setIsAdding(true);
     
-    // Add to cart with quantity 1
-    dispatch(addToCart({
+    const cartItem = {
+      item: data._id,
       id: data._id,
       name: data.name,
       price: data.price,
@@ -53,19 +55,44 @@ function FoodCard({ data }) {
       shop: data.shop,
       quantity: 1,
       foodType: data.foodType,
-    }));
+    };
 
-    // Show success animation
-    setShowAdded(true);
-    setTimeout(() => {
-      setShowAdded(false);
+    try {
+      // Add to cart in database
+      await axios.post(`${serverUrl}/api/user/cart`, cartItem, {
+        withCredentials: true,
+      });
+
+      // Add to Redux state
+      dispatch(addToCart(cartItem));
+
+      // Show success animation
+      setShowAdded(true);
+      setTimeout(() => {
+        setShowAdded(false);
+        setIsAdding(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      alert('Failed to add item to cart. Please try again.');
       setIsAdding(false);
-    }, 2000);
+    }
   };
 
-  const handleRemoveFromCart = () => {
-    dispatch(removeCartItem(data._id));
-    setIsInCart(false);
+  const handleRemoveFromCart = async () => {
+    try {
+      // Remove from database
+      await axios.delete(`${serverUrl}/api/user/cart/${data._id}`, {
+        withCredentials: true,
+      });
+
+      // Remove from Redux state
+      dispatch(removeCartItem(data._id));
+      setIsInCart(false);
+    } catch (error) {
+      console.error('Failed to remove from cart:', error);
+      alert('Failed to remove item from cart. Please try again.');
+    }
   };
 
   const cardVariants = {

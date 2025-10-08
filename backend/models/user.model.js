@@ -49,6 +49,26 @@ const userSchema = new mongoose.Schema(
       type: { type: String, enum: ["Point"], default: "Point" },
       coordinates: { type: [Number], default: [0, 0] },
     },
+    cart: [
+      {
+        item: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Item",
+        },
+        id: String,
+        name: String,
+        image: String,
+        price: Number,
+        quantity: {
+          type: Number,
+          default: 1,
+        },
+        shop: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Shop",
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

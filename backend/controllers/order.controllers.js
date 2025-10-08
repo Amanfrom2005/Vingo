@@ -85,6 +85,9 @@ export const placeOrder = async (req, res) => {
             shopOrders
         })
 
+        // Clear user's cart after successful order
+        await User.findByIdAndUpdate(req.userId, { cart: [] })
+
         await newOrder.populate("shopOrders.shopOrderItems.item", "name image price")
         await newOrder.populate("shopOrders.shop", "name")
         await newOrder.populate("shopOrders.owner", "name socketId")
@@ -132,6 +135,9 @@ export const verifyPayment = async (req, res) => {
         order.payment = true
         order.razorpayPaymentId = razorpay_payment_id
         await order.save()
+
+        // Clear user's cart after successful payment
+        await User.findByIdAndUpdate(order.user, { cart: [] })
 
         await order.populate("shopOrders.shopOrderItems.item", "name image price")
         await order.populate("shopOrders.shop", "name")
@@ -227,10 +233,14 @@ export const updateOrderStatus = async (req, res) => {
                 location: {
                     $near: {
                         $geometry: { type: "Point", coordinates: [Number(longitude), Number(latitude)] },
-                        $maxDistance: 5000
+                        $maxDistance: 50000 // 5km radius
                     }
                 }
             })
+            
+            // Debug logs for assignment targeting (can be removed in production)
+            console.log('[updateOrderStatus] Nearby delivery boys:', nearByDeliveryBoys.map(b => ({ id: b._id, name: b.fullName, socketId: b.socketId, coords: b.location?.coordinates })));
+            
 
             const nearByIds = nearByDeliveryBoys.map(b => b._id)
             const busyIds = await DeliveryAssignment.find({
@@ -243,9 +253,12 @@ export const updateOrderStatus = async (req, res) => {
 
             const availableBoys = nearByDeliveryBoys.filter(b => !busyIdSet.has(String(b._id)))
             const candidates = availableBoys.map(b => b._id)
+            
+            console.log('[updateOrderStatus] Available delivery boys (not busy):', availableBoys.map(b => ({ id: b._id, name: b.fullName })));
 
             if (candidates.length == 0) {
                 await order.save()
+                console.log('[updateOrderStatus] No available delivery boys within radius');
                 return res.json({
                     message: "order status updated but there is no available delivery boys"
                 })
@@ -258,6 +271,7 @@ export const updateOrderStatus = async (req, res) => {
                 brodcastedTo: candidates,
                 status: "brodcasted"
             })
+            console.log('[updateOrderStatus] DeliveryAssignment created:', { id: deliveryAssignment._id, candidates: candidates.length });
 
             shopOrder.assignedDeliveryBoy = deliveryAssignment.assignedTo
             shopOrder.assignment = deliveryAssignment._id
@@ -285,6 +299,9 @@ export const updateOrderStatus = async (req, res) => {
                             items: deliveryAssignment.order.shopOrders.find(so => so._id.equals(deliveryAssignment.shopOrderId)).shopOrderItems || [],
                             subtotal: deliveryAssignment.order.shopOrders.find(so => so._id.equals(deliveryAssignment.shopOrderId))?.subtotal
                         })
+                        console.log('[updateOrderStatus] Emitted newAssignment to', boy.fullName, 'socket', boySocketId);
+                    } else {
+                        console.log('[updateOrderStatus] No socketId for', boy.fullName, '- cannot emit');
                     }
                 });
             }
@@ -416,16 +433,16 @@ export const getCurrentOrder = async (req, res) => {
             });
 
         if (!assignment) {
-            return res.status(400).json({ message: "assignment not found" });
+            return res.status(404).json({ message: "No active assignment found" });
         }
         if (!assignment.order) {
-            return res.status(400).json({ message: "order not found" });
+            return res.status(404).json({ message: "Order not found" });
         }
 
         const shopOrder = assignment.order.shopOrders.find(so => String(so._id) === String(assignment.shopOrderId));
 
         if (!shopOrder) {
-            return res.status(400).json({ message: "shopOrder not found" });
+            return res.status(404).json({ message: "Shop order not found" });
         }
 
         let deliveryBoyLocation = { lat: null, lon: null };
@@ -516,11 +533,18 @@ export const verifyDeliveryOtp = async (req, res) => {
         shopOrder.status = "delivered"
         shopOrder.deliveredAt = Date.now()
         await order.save()
-        await DeliveryAssignment.deleteOne({
-            shopOrderId: shopOrder._id,
-            order: order._id,
-            assignedTo: shopOrder.assignedDeliveryBoy
-        })
+        
+        // Update assignment status to completed instead of deleting
+        await DeliveryAssignment.findOneAndUpdate(
+            {
+                shopOrderId: shopOrder._id,
+                order: order._id,
+                assignedTo: shopOrder.assignedDeliveryBoy
+            },
+            {
+                status: "completed"
+            }
+        )
 
         return res.status(200).json({ message: "Order Delivered Successfully!" })
 

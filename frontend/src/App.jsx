@@ -30,6 +30,7 @@ import useGetMyshop from "./hooks/useGetMyShop";
 import useGetShopByCity from "./hooks/useGetShopByCity";
 import useGetItemsByCity from "./hooks/useGetItemsByCity";
 import useGetMyOrders from "./hooks/useGetMyOrders";
+import useCartSync from "./hooks/useCartSync";
 
 import AdminLayout from "./admin/AdminLayout";
 import AdminHome from "./admin/pages/AdminHome";
@@ -55,6 +56,7 @@ function App() {
   useGetShopByCity();
   useGetItemsByCity();
   useGetMyOrders();
+  useCartSync();
 
   useEffect(() => {
     if (userData) {

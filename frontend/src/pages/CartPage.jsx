@@ -9,6 +9,8 @@ import CartItemCard from '../components/CartItemCard';
 import Nav from '../components/Nav';
 import Footer from '../components/Footer';
 import { clearCart } from '../redux/userSlice';
+import axios from 'axios';
+import { serverUrl } from '../App';
 
 function CartPage() {
   const navigate = useNavigate();
@@ -19,9 +21,17 @@ function CartPage() {
   const discount = totalAmount > 500 ? 40 : 0;
   const finalAmount = totalAmount + deliveryFee;
 
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
     if (window.confirm('Are you sure you want to clear your cart?')) {
-      dispatch(clearCart());
+      try {
+        await axios.delete(`${serverUrl}/api/user/cart-clear`, {
+          withCredentials: true,
+        });
+        dispatch(clearCart());
+      } catch (error) {
+        console.error('Failed to clear cart:', error);
+        alert('Failed to clear cart. Please try again.');
+      }
     }
   };
 

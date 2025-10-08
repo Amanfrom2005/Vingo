@@ -25,6 +25,8 @@ const socketMiddleware = () => {
           if (userData) {
             socket.emit('identity', { userId: userData._id });
           }
+          // Don't store socket in Redux to avoid serialization warnings
+          // Components can access socket through module-level variable
         });
 
         socket.on('disconnect', () => {

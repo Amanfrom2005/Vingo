@@ -52,26 +52,67 @@ function DeliveryBoy() {
 
   // Track delivery boy geo-location and emit updates to the socket server
   useEffect(() => {
-    if (!socket || userData.role !== 'deliveryBoy') return;
+    if (!userData || userData.role !== 'deliveryBoy') return;
 
-    let watchId;
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-          setDeliveryBoyLocation({ lat: latitude, lon: longitude });
+    const updateLocationToServer = async (latitude, longitude) => {
+      try {
+        // Try socket first
+        if (socket) {
           socket.emit('updateLocation', {
             latitude,
             longitude,
             userId: userData._id,
           });
+        }
+        
+        // Also use HTTP API as fallback
+        await axios.post(
+          `${serverUrl}/api/user/update-location`,
+          { lat: latitude, lon: longitude },
+          { withCredentials: true }
+        );
+        
+        console.log('Location updated:', { lat: latitude, lon: longitude });
+      } catch (error) {
+        console.error('Failed to update location:', error);
+      }
+    };
+
+    let watchId;
+    if (navigator.geolocation) {
+      // First, get current location immediately
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          setDeliveryBoyLocation({ lat: latitude, lon: longitude });
+          updateLocationToServer(latitude, longitude);
+        },
+        (error) => {
+          console.error('Failed to get current location:', error);
+          alert('Please enable location permissions for delivery tracking to work.');
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+      );
+
+      // Then watch for location changes
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          setDeliveryBoyLocation({ lat: latitude, lon: longitude });
+          updateLocationToServer(latitude, longitude);
         },
         (error) => {
           console.error('Location tracking error:', error);
+          if (error.code === error.PERMISSION_DENIED) {
+            alert('Location access denied. Please enable location permissions and refresh the page.');
+          }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
       );
+    } else {
+      alert('Geolocation is not supported by this browser.');
     }
 
     return () => {
@@ -93,27 +134,32 @@ function DeliveryBoy() {
   // Fetch available assignments
   const getAssignments = async () => {
     try {
+      console.log('Fetching assignments for delivery boy...');
       const result = await axios.get(`${serverUrl}/api/order/get-assignments`, { withCredentials: true });
+      console.log('Available assignments:', result.data);
       setAvailableAssignments(result.data);
     } catch (error) {
       console.error('Failed to fetch assignments:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
     }
   };
 
   // Fetch current order in progress
-const getCurrentOrder = async () => {
-  try {
-    const result = await axios.get(`${serverUrl}/api/order/get-current-order`, { withCredentials: true });
-    setCurrentOrder(result.data);
-  } catch (error) {
-    if (error.response?.status === 400) {
-      // No active order found
-      setCurrentOrder(null);
-    } else {
-      console.error('Failed to fetch current order:', error);
+  const getCurrentOrder = async () => {
+    try {
+      const result = await axios.get(`${serverUrl}/api/order/get-current-order`, { withCredentials: true });
+      setCurrentOrder(result.data);
+    } catch (error) {
+      if (error.response?.status === 404 || error.response?.status === 400) {
+        // No active order found - this is expected, not an error
+        setCurrentOrder(null);
+      } else {
+        console.error('Failed to fetch current order:', error);
+      }
     }
-  }
-};
+  };
 
   // Accept an assignment by its ID
   const acceptOrder = async (assignmentId) => {
@@ -312,7 +358,12 @@ const getCurrentOrder = async () => {
                 <p className="text-xs font-mono text-gray-900">
                   {deliveryBoyLocation ? 
                     `${deliveryBoyLocation.lat.toFixed(4)}, ${deliveryBoyLocation.lon.toFixed(4)}` : 
-                    'Tracking...'}
+                    'Getting location...'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {deliveryBoyLocation ? 
+                    '✅ Location active' : 
+                    '⚠️ Location pending'}
                 </p>
               </div>
             </div>
@@ -685,6 +736,22 @@ const getCurrentOrder = async () => {
                   className="w-full bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors duration-200"
                 >
                   Update Stats
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('Current user data:', userData);
+                    console.log('Current delivery boy location:', deliveryBoyLocation);
+                    console.log('Socket connected:', !!socket);
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => console.log('Browser location:', pos.coords),
+                        (err) => console.error('Location error:', err)
+                      );
+                    }
+                  }}
+                  className="w-full bg-purple-500 text-white py-2 rounded-lg font-semibold hover:bg-purple-600 transition-colors duration-200 text-xs"
+                >
+                  Debug Info
                 </button>
               </div>
             </motion.div>
